@@ -160,12 +160,12 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 
 ### vs. Other Libraries
 
-| Library | AES-256 | PBKDF2 | HMAC | TypeScript | CLI |
-|---------|---------|--------|------|------------|-----|
+| Library | AES-256 | PBKDF2 | HMAC | TypeScript | Edge |
+|---------|---------|--------|------|------------|------|
 | **pdf-encrypt-pro** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | node-forge | ✅ | ⚠️ | ❌ | ❌ | ❌ |
-| pdf-lib alone | ❌ | ❌ | ❌ | ✅ | ❌ |
-| qpdf | ✅ | ⚠️ | ❌ | ❌ | ✅ |
+| pdf-lib alone | ❌ | ❌ | ❌ | ✅ | ✅ |
+| qpdf | ✅ | ⚠️ | ❌ | ❌ | ❌ |
 
 ## 🔒 Security Features
 
@@ -186,24 +186,6 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 - **Coverage**: Full document post-encryption
 - **Verification**: Automatic on PDF open
 - **Protection**: Detects any tampering
-
-## 🎛️ CLI Options
-
-```
-Options:
-  -o, --output <path>              Output file path
-  -p, --password <password>        User password (required)
-  -op, --owner-password <password> Owner password
-  -a, --algorithm <type>           AES-256|AES-128|RC4-128 (default: AES-256)
-  -i, --iterations <number>        PBKDF2 iterations (default: 10000)
-  --hmac                           Enable HMAC integrity
-  --no-printing                    Disable printing
-  --no-copying                     Disable copying
-  --no-modifying                   Disable modifying
-  --no-annotating                  Disable annotations
-  --no-forms                       Disable form filling
-  --verbose                        Show detailed output
-```
 
 ## 📚 API Reference
 
