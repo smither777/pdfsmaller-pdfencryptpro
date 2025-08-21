@@ -39,7 +39,6 @@ When [PDFSmaller.com](https://pdfsmaller.com) users needed bank-level PDF securi
 - 🎛️ **Granular Permissions** - Control printing, copying, editing, etc.
 - 💼 **Enterprise Ready** - FIPS & ISO compliance compatible
 - ⚡ **Zero Node.js Dependencies** - Pure Web Crypto API
-- 🖥️ **CLI Tool** - Command-line automation for Node.js
 - 📘 **Full TypeScript** - Complete type definitions
 
 ## 📥 Installation
@@ -48,31 +47,7 @@ When [PDFSmaller.com](https://pdfsmaller.com) users needed bank-level PDF securi
 npm install @pdfsmaller/pdf-encrypt-pro
 ```
 
-Or install globally for CLI usage:
-
-```bash
-npm install -g @pdfsmaller/pdf-encrypt-pro
-```
-
 ## 💻 Usage
-
-### Command Line
-
-```bash
-# Basic AES-256 encryption
-pdf-encrypt-pro document.pdf -p "strongPassword123"
-
-# Advanced security with HMAC
-pdf-encrypt-pro document.pdf \
-  -o secured.pdf \
-  -p "userPass" \
-  -op "ownerPass" \
-  -a AES-256 \
-  -i 10000 \
-  --hmac \
-  --no-printing \
-  --no-copying
-```
 
 ### Edge/Browser Usage (Cloudflare Workers, Vercel Edge, Browser)
 
