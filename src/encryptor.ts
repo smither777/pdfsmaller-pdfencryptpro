@@ -1,6 +1,4 @@
 import { PDFDocument, PDFDict, PDFName, PDFHexString, PDFNumber } from 'pdf-lib';
-import { readFileSync, writeFileSync, existsSync } from 'fs';
-import { basename, dirname, join } from 'path';
 import { CryptoEngine } from './crypto';
 import {
   EncryptionOptions,
@@ -23,69 +21,68 @@ export class PDFEncryptor {
   };
 
   static async encryptPDF(
-    inputPath: string,
-    outputPath: string,
+    pdfBytes: Uint8Array,
+    options: EncryptionOptions,
+  ): Promise<Uint8Array> {
+
+    const pdfDoc = await PDFDocument.load(pdfBytes);
+
+    const algorithm = options.algorithm || 'AES-256';
+    const userPassword = options.userPassword;
+    const ownerPassword = options.ownerPassword || userPassword;
+
+    const salt = CryptoEngine.generateSalt();
+    const userKey = await CryptoEngine.deriveKey(userPassword, salt, algorithm, options.kdf);
+    const ownerKey = await CryptoEngine.deriveKey(ownerPassword, salt, algorithm, options.kdf);
+
+    const permissions = this.calculatePermissions(options.permissions);
+
+    const encryptDict = await this.createEncryptionDictionary(
+      pdfDoc,
+      algorithm,
+      userKey,
+      ownerKey,
+      salt,
+      permissions,
+      options,
+    );
+
+    pdfDoc.context.trailerInfo.Encrypt = pdfDoc.context.register(encryptDict);
+
+    if (options.enableHMAC) {
+      const documentId = pdfDoc.context.trailerInfo.ID;
+      if (documentId && Array.isArray(documentId)) {
+        const hmacKey = await CryptoEngine.deriveKey(
+          userPassword + ownerPassword,
+          salt,
+          algorithm,
+          options.kdf,
+        );
+        const documentBytes = await pdfDoc.save();
+        const hmac = await CryptoEngine.generateHMAC(new Uint8Array(documentBytes), hmacKey);
+        
+        encryptDict.set(PDFName.of('HMAC'), PDFHexString.of(this.uint8ArrayToHex(hmac)));
+      }
+    }
+
+    const encryptedBytes = await pdfDoc.save({
+      useObjectStreams: false,
+    });
+
+    return new Uint8Array(encryptedBytes);
+  }
+
+  static async encryptPDFWithMetadata(
+    pdfBytes: Uint8Array,
     options: EncryptionOptions,
   ): Promise<EncryptionResult> {
     const startTime = Date.now();
 
     try {
-      if (!existsSync(inputPath)) {
-        return {
-          success: false,
-          error: `Input file not found: ${inputPath}`,
-        };
-      }
-
-      const pdfBytes = readFileSync(inputPath);
-      const pdfDoc = await PDFDocument.load(pdfBytes);
-
-      const algorithm = options.algorithm || 'AES-256';
-      const userPassword = options.userPassword;
-      const ownerPassword = options.ownerPassword || userPassword;
-
-      const salt = CryptoEngine.generateSalt();
-      const userKey = CryptoEngine.deriveKey(userPassword, salt, algorithm, options.kdf);
-      const ownerKey = CryptoEngine.deriveKey(ownerPassword, salt, algorithm, options.kdf);
-
-      const permissions = this.calculatePermissions(options.permissions);
-
-      const encryptDict = this.createEncryptionDictionary(
-        pdfDoc,
-        algorithm,
-        userKey,
-        ownerKey,
-        salt,
-        permissions,
-        options,
-      );
-
-      pdfDoc.context.trailerInfo.Encrypt = pdfDoc.context.register(encryptDict);
-
-      if (options.enableHMAC) {
-        const documentId = pdfDoc.context.trailerInfo.ID;
-        if (documentId && Array.isArray(documentId)) {
-          const hmacKey = CryptoEngine.deriveKey(
-            userPassword + ownerPassword,
-            salt,
-            algorithm,
-            options.kdf,
-          );
-          const documentBytes = await pdfDoc.save();
-          const hmac = CryptoEngine.generateHMAC(Buffer.from(documentBytes), hmacKey);
-          
-          encryptDict.set(PDFName.of('HMAC'), PDFHexString.of(hmac.toString('hex')));
-        }
-      }
-
-      const encryptedBytes = await pdfDoc.save({
-        useObjectStreams: false,
-      });
-
-      writeFileSync(outputPath, encryptedBytes);
+      const encryptedBytes = await this.encryptPDF(pdfBytes, options);
 
       const metadata: EncryptionMetadata = {
-        algorithm,
+        algorithm: options.algorithm || 'AES-256',
         kdfIterations: options.kdf?.iterations || 10000,
         hmacEnabled: options.enableHMAC || false,
         fileSize: encryptedBytes.length,
@@ -94,7 +91,7 @@ export class PDFEncryptor {
 
       return {
         success: true,
-        outputPath,
+        encryptedBytes,
         metadata,
       };
     } catch (error) {
@@ -105,15 +102,15 @@ export class PDFEncryptor {
     }
   }
 
-  private static createEncryptionDictionary(
+  private static async createEncryptionDictionary(
     pdfDoc: PDFDocument,
     algorithm: EncryptionAlgorithm,
-    userKey: Buffer,
-    ownerKey: Buffer,
-    salt: Buffer,
+    userKey: Uint8Array,
+    ownerKey: Uint8Array,
+    salt: Uint8Array,
     permissions: number,
     options: EncryptionOptions,
-  ): PDFDict {
+  ): Promise<PDFDict> {
     const encryptDict = pdfDoc.context.obj({});
 
     encryptDict.set(PDFName.of('Filter'), PDFName.of('Standard'));
@@ -143,15 +140,15 @@ export class PDFEncryptor {
       encryptDict.set(PDFName.of('StrF'), PDFName.of('StdCF'));
     }
 
-    const userKeyHex = this.padKey(userKey, 32).toString('hex');
-    const ownerKeyHex = this.padKey(ownerKey, 32).toString('hex');
+    const userKeyHex = this.uint8ArrayToHex(this.padKey(userKey, 32));
+    const ownerKeyHex = this.uint8ArrayToHex(this.padKey(ownerKey, 32));
 
     encryptDict.set(PDFName.of('U'), PDFHexString.of(userKeyHex));
     encryptDict.set(PDFName.of('O'), PDFHexString.of(ownerKeyHex));
     encryptDict.set(PDFName.of('P'), PDFNumber.of(permissions));
 
     if (algorithm !== 'RC4-128' && options.kdf) {
-      encryptDict.set(PDFName.of('Salt'), PDFHexString.of(salt.toString('hex')));
+      encryptDict.set(PDFName.of('Salt'), PDFHexString.of(this.uint8ArrayToHex(salt)));
       encryptDict.set(
         PDFName.of('Iterations'),
         PDFNumber.of(options.kdf.iterations || 10000),
@@ -178,17 +175,17 @@ export class PDFEncryptor {
     return flags;
   }
 
-  private static padKey(key: Buffer, length: number): Buffer {
-    if (key.length >= length) return key.subarray(0, length);
+  private static padKey(key: Uint8Array, length: number): Uint8Array {
+    if (key.length >= length) return key.slice(0, length);
     
-    const padded = Buffer.alloc(length);
-    key.copy(padded);
+    const padded = new Uint8Array(length);
+    padded.set(key);
     return padded;
   }
 
-  static generateOutputPath(inputPath: string, suffix = '_encrypted'): string {
-    const dir = dirname(inputPath);
-    const base = basename(inputPath, '.pdf');
-    return join(dir, `${base}${suffix}.pdf`);
+  private static uint8ArrayToHex(array: Uint8Array): string {
+    return Array.from(array)
+      .map(byte => byte.toString(16).padStart(2, '0'))
+      .join('');
   }
 }

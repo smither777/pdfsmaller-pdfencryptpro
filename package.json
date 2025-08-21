@@ -5,7 +5,7 @@
   "main": "dist/index.js",
   "types": "dist/index.d.ts",
   "bin": {
-    "pdf-encrypt-pro": "./dist/cli.js"
+    "pdf-encrypt-pro": "./dist/cli-node.js"
   },
   "scripts": {
     "build": "tsc",

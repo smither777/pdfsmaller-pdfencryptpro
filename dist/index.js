@@ -10,14 +10,48 @@ var __createBinding = (this && this.__createBinding) || (Object.create ? (functi
     if (k2 === undefined) k2 = k;
     o[k2] = m[k];
 }));
+var __setModuleDefault = (this && this.__setModuleDefault) || (Object.create ? (function(o, v) {
+    Object.defineProperty(o, "default", { enumerable: true, value: v });
+}) : function(o, v) {
+    o["default"] = v;
+});
 var __exportStar = (this && this.__exportStar) || function(m, exports) {
     for (var p in m) if (p !== "default" && !Object.prototype.hasOwnProperty.call(exports, p)) __createBinding(exports, m, p);
 };
+var __importStar = (this && this.__importStar) || (function () {
+    var ownKeys = function(o) {
+        ownKeys = Object.getOwnPropertyNames || function (o) {
+            var ar = [];
+            for (var k in o) if (Object.prototype.hasOwnProperty.call(o, k)) ar[ar.length] = k;
+            return ar;
+        };
+        return ownKeys(o);
+    };
+    return function (mod) {
+        if (mod && mod.__esModule) return mod;
+        var result = {};
+        if (mod != null) for (var k = ownKeys(mod), i = 0; i < k.length; i++) if (k[i] !== "default") __createBinding(result, mod, k[i]);
+        __setModuleDefault(result, mod);
+        return result;
+    };
+})();
 Object.defineProperty(exports, "__esModule", { value: true });
 exports.CryptoEngine = exports.PDFEncryptor = void 0;
+exports.encryptPDF = encryptPDF;
 var encryptor_1 = require("./encryptor");
 Object.defineProperty(exports, "PDFEncryptor", { enumerable: true, get: function () { return encryptor_1.PDFEncryptor; } });
 var crypto_1 = require("./crypto");
 Object.defineProperty(exports, "CryptoEngine", { enumerable: true, get: function () { return crypto_1.CryptoEngine; } });
 __exportStar(require("./types"), exports);
+// Edge-compatible convenience function
+async function encryptPDF(pdfBytes, userPassword, ownerPassword, options) {
+    const { PDFEncryptor } = await Promise.resolve().then(() => __importStar(require('./encryptor')));
+    return PDFEncryptor.encryptPDF(pdfBytes, {
+        userPassword,
+        ownerPassword,
+        algorithm: options?.algorithm || 'AES-256',
+        enableHMAC: options?.enableHMAC,
+        kdf: options?.iterations ? { iterations: options.iterations } : undefined,
+    });
+}
 //# sourceMappingURL=index.js.map

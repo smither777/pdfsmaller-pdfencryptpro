@@ -24,6 +24,7 @@ export interface Permissions {
 export interface EncryptionResult {
     success: boolean;
     outputPath?: string;
+    encryptedBytes?: Uint8Array;
     error?: string;
     metadata?: EncryptionMetadata;
 }

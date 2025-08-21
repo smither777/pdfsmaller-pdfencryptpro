@@ -1,10 +1,11 @@
 import { EncryptionOptions, EncryptionResult } from './types';
 export declare class PDFEncryptor {
     private static readonly PERMISSIONS_FLAGS;
-    static encryptPDF(inputPath: string, outputPath: string, options: EncryptionOptions): Promise<EncryptionResult>;
+    static encryptPDF(pdfBytes: Uint8Array, options: EncryptionOptions): Promise<Uint8Array>;
+    static encryptPDFWithMetadata(pdfBytes: Uint8Array, options: EncryptionOptions): Promise<EncryptionResult>;
     private static createEncryptionDictionary;
     private static calculatePermissions;
     private static padKey;
-    static generateOutputPath(inputPath: string, suffix?: string): string;
+    private static uint8ArrayToHex;
 }
 //# sourceMappingURL=encryptor.d.ts.map

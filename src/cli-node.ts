@@ -1,8 +1,8 @@
 #!/usr/bin/env node
 
 import { Command } from 'commander';
-import { existsSync, statSync } from 'fs';
-import { resolve } from 'path';
+import { existsSync, statSync, readFileSync, writeFileSync } from 'fs';
+import { resolve, basename, dirname, join } from 'path';
 import chalk from 'chalk';
 import ora from 'ora';
 import { PDFEncryptor } from './encryptor';
@@ -59,7 +59,7 @@ program
 
       const outputPath = options.output
         ? resolve(options.output)
-        : PDFEncryptor.generateOutputPath(inputPath, '_encrypted');
+        : generateOutputPath(inputPath, '_encrypted');
 
       const algorithm = options.algorithm.toUpperCase() as EncryptionAlgorithm;
       if (!['AES-256', 'AES-128', 'RC4-128'].includes(algorithm)) {
@@ -98,9 +98,11 @@ program
 
       spinner.start(chalk.yellow('Encrypting PDF...'));
 
-      const result = await PDFEncryptor.encryptPDF(inputPath, outputPath, encryptionOptions);
+      const pdfBytes = new Uint8Array(readFileSync(inputPath));
+      const result = await PDFEncryptor.encryptPDFWithMetadata(pdfBytes, encryptionOptions);
 
-      if (result.success) {
+      if (result.success && result.encryptedBytes) {
+        writeFileSync(outputPath, result.encryptedBytes);
         spinner.succeed(chalk.green('PDF encrypted successfully!'));
 
         if (options.verbose && result.metadata) {
@@ -112,7 +114,7 @@ program
           console.log(`  Time: ${result.metadata.encryptionTime} ms`);
         }
 
-        console.log(chalk.blue(`\\nOutput: ${result.outputPath}`));
+        console.log(chalk.blue(`\\nOutput: ${outputPath}`));
       } else {
         spinner.fail(chalk.red('Encryption failed'));
         console.error(chalk.red(`Error: ${result.error}`));
@@ -124,5 +126,11 @@ program
       process.exit(1);
     }
   });
+
+function generateOutputPath(inputPath: string, suffix = '_encrypted'): string {
+  const dir = dirname(inputPath);
+  const base = basename(inputPath, '.pdf');
+  return join(dir, `${base}${suffix}.pdf`);
+}
 
 program.parse();
