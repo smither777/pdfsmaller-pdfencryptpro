@@ -1,8 +1,8 @@
 # pdf-encrypt-pro 🔐
 
-**Enterprise-grade PDF encryption with AES-256, PBKDF2, and HMAC - Works everywhere: Edge, Browser, Node.js!**
+**Enterprise-grade PDF encryption with AES-128, PBKDF2, and HMAC - Works everywhere: Edge, Browser, Node.js!**
 
-Built by [PDFSmaller.com](https://pdfsmaller.com) - The ONLY AES-256 PDF encryption library that works in Cloudflare Workers!
+Built by [PDFSmaller.com](https://pdfsmaller.com) - The ONLY AES-128 PDF encryption library that works in Cloudflare Workers!
 
 [![NPM Version](https://img.shields.io/npm/v/@pdfsmaller/pdf-encrypt-pro.svg)](https://www.npmjs.com/package/@pdfsmaller/pdf-encrypt-pro)
 [![Edge Compatible](https://img.shields.io/badge/Edge-Compatible-green)](https://developers.cloudflare.com/workers/)
@@ -11,19 +11,19 @@ Built by [PDFSmaller.com](https://pdfsmaller.com) - The ONLY AES-256 PDF encrypt
 
 ## 🚀 Why pdf-encrypt-pro?
 
-**The ONLY professional PDF encryption library with TRUE AES-256 that works in edge environments!**
+**The ONLY professional PDF encryption library with AES-128 that works in edge environments!**
 
 When [PDFSmaller.com](https://pdfsmaller.com) users needed bank-level PDF security that works everywhere - from Cloudflare Workers to browsers to Node.js - we built this. While other "enterprise" libraries are stuck in Node.js, we deliver:
 
-- **TRUE AES-256 encryption** using Web Crypto API (works in edge!)
+- **AES-128 encryption** using Web Crypto API (works in edge!)
 - **PBKDF2 key derivation** to prevent brute-force attacks  
 - **HMAC integrity verification** to detect tampering
 - **Runs EVERYWHERE** - Cloudflare Workers, Vercel Edge, browsers, Node.js
 
-**Version 1.1.0: Now with REAL AES-256 encryption, not just RC4!**
+**Version 1.2.0: AES-128 with PDF 1.6 compatibility for maximum support!**
 
 ### The Security Stack We Built:
-- ✅ **AES-256**: NSA-approved encryption standard
+- ✅ **AES-128**: Industry-standard encryption (PDF 1.6 compatible)
 - ✅ **PBKDF2**: 10,000+ iterations for key strengthening
 - ✅ **HMAC-SHA256**: Cryptographic integrity verification
 - ✅ **Full permission control**: 8 granular permission flags
@@ -32,10 +32,10 @@ When [PDFSmaller.com](https://pdfsmaller.com) users needed bank-level PDF securi
 ## ✨ Features
 
 - 🌐 **Edge Compatible** - Works in Cloudflare Workers, Vercel Edge, Deno Deploy
-- 🔐 **AES-256 Encryption** - Using Web Crypto API for universal compatibility
+- 🔐 **AES-128 Encryption** - Using Web Crypto API with PDF 1.6 compatibility
 - 🔑 **PBKDF2 Key Derivation** - Configurable iterations (default: 10,000)
 - 🛡️ **HMAC Integrity** - Detect document tampering
-- 📋 **Multiple Algorithms** - AES-256, AES-128, RC4-128
+- 📋 **Multiple Algorithms** - AES-128, RC4-128
 - 🎛️ **Granular Permissions** - Control printing, copying, editing, etc.
 - 💼 **Enterprise Ready** - FIPS & ISO compliance compatible
 - ⚡ **Zero Node.js Dependencies** - Pure Web Crypto API
@@ -60,7 +60,7 @@ const encryptedBytes = await encryptPDF(
   'userPassword',
   'ownerPassword',
   {
-    algorithm: 'AES-256',
+    algorithm: 'AES-128',
     enableHMAC: true,
     iterations: 10000
   }
@@ -76,10 +76,10 @@ import fs from 'fs';
 // Read PDF file
 const pdfBytes = new Uint8Array(fs.readFileSync('document.pdf'));
 
-// Basic AES-256 encryption
+// Basic AES-128 encryption
 const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
   userPassword: 'secretPassword123',
-  algorithm: 'AES-256'
+  algorithm: 'AES-128'
 });
 
 // Save encrypted PDF
@@ -89,7 +89,7 @@ fs.writeFileSync('encrypted.pdf', encryptedBytes);
 const result = await PDFEncryptor.encryptPDFWithMetadata(pdfBytes, {
   userPassword: 'userPass123',
   ownerPassword: 'ownerPass456',
-  algorithm: 'AES-256',
+  algorithm: 'AES-128',
   kdf: {
     iterations: 10000,
     saltLength: 16
@@ -127,10 +127,10 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 ## 🏗️ How It Works
 
 1. **Password Processing**: PBKDF2 derives cryptographic keys from passwords
-2. **Content Encryption**: AES-256-CBC encrypts all PDF streams
+2. **Content Encryption**: AES-128-CBC encrypts all PDF streams
 3. **Integrity Protection**: HMAC-SHA256 signs the encrypted document
 4. **Permission Enforcement**: Granular flags control document usage
-5. **Standard Compliance**: Implements PDF 2.0 encryption specifications
+5. **Standard Compliance**: Implements PDF 1.6 encryption specifications
 
 ## 📊 Comparison
 
@@ -141,7 +141,7 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 | **Works in Cloudflare Workers** | ✅ | ❌ |
 | **Works in Vercel Edge** | ✅ | ❌ |
 | **Works in Browser** | ✅ | ❌ |
-| **AES-256 Encryption** | ✅ | ✅ |
+| **AES-128 Encryption** | ✅ | ✅ |
 | **PBKDF2** | ✅ | ✅ |
 | **HMAC** | ✅ | ⚠️ |
 | **No Node.js Required** | ✅ | ❌ |
@@ -160,7 +160,7 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 
 ### vs. Other Libraries
 
-| Library | AES-256 | PBKDF2 | HMAC | TypeScript | Edge |
+| Library | AES-128 | PBKDF2 | HMAC | TypeScript | Edge |
 |---------|---------|--------|------|------------|------|
 | **pdf-encrypt-pro** | ✅ | ✅ | ✅ | ✅ | ✅ |
 | node-forge | ✅ | ⚠️ | ❌ | ❌ | ❌ |
@@ -169,11 +169,11 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 
 ## 🔒 Security Features
 
-### AES-256 Encryption
-- **Standard**: FIPS 197, ISO/IEC 18033-3
-- **Key Size**: 256 bits
+### AES-128 Encryption
+- **Standard**: FIPS 197, ISO/IEC 18033-3, PDF 1.6
+- **Key Size**: 128 bits
 - **Mode**: CBC with random IV
-- **Padding**: PKCS#7
+- **Compatibility**: V=4, R=4 (widely supported)
 
 ### PBKDF2 Key Derivation
 - **Algorithm**: PBKDF2-HMAC-SHA256
@@ -195,7 +195,7 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 interface EncryptionOptions {
   userPassword: string;
   ownerPassword?: string;
-  algorithm?: 'AES-256' | 'AES-128' | 'RC4-128';
+  algorithm?: 'AES-128' | 'RC4-128';
   kdf?: {
     iterations?: number;  // Default: 10000
     saltLength?: number;  // Default: 16
@@ -247,7 +247,7 @@ export default {
     
     // Works perfectly in edge environment!
     const encrypted = await encryptPDF(pdfBytes, password, password, {
-      algorithm: 'AES-256',
+      algorithm: 'AES-128',
       enableHMAC: true
     });
     
@@ -269,7 +269,7 @@ export default async function handler(request) {
   const pdfBytes = new Uint8Array(Buffer.from(pdf, 'base64'));
   
   const encrypted = await encryptPDF(pdfBytes, password, password, {
-    algorithm: 'AES-256',
+    algorithm: 'AES-128',
     enableHMAC: true,
     iterations: 10000
   });
@@ -290,7 +290,7 @@ async function protectPDF(file, password) {
   
   // Encrypt directly in the browser!
   const encrypted = await encryptPDF(pdfBytes, password, password, {
-    algorithm: 'AES-256',
+    algorithm: 'AES-128',
     enableHMAC: true
   });
   
@@ -311,7 +311,7 @@ app.post('/encrypt', upload.single('pdf'), async (req, res) => {
   
   const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
     userPassword: req.body.password,
-    algorithm: 'AES-256',
+    algorithm: 'AES-128',
     enableHMAC: true
   });
   
@@ -327,7 +327,7 @@ exports.handler = async (event) => {
   
   const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
     userPassword: event.password,
-    algorithm: 'AES-256',
+    algorithm: 'AES-128',
     kdf: { iterations: 10000 },
     enableHMAC: true
   });
