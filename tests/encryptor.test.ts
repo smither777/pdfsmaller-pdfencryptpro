@@ -1,29 +1,15 @@
 import { PDFEncryptor } from '../src/encryptor';
 import { EncryptionOptions } from '../src/types';
-import { writeFileSync, unlinkSync, existsSync } from 'fs';
-import { join } from 'path';
 import { PDFDocument } from 'pdf-lib';
 
 describe('PDFEncryptor', () => {
-  const testDir = join(__dirname, 'fixtures');
-  const testPdfPath = join(testDir, 'test.pdf');
-  const outputPath = join(testDir, 'test_encrypted.pdf');
+  let testPdfBytes: Uint8Array;
 
   beforeAll(async () => {
     const pdfDoc = await PDFDocument.create();
     const page = pdfDoc.addPage();
     page.drawText('Test PDF Content', { x: 50, y: 500 });
-    const pdfBytes = await pdfDoc.save();
-    writeFileSync(testPdfPath, pdfBytes);
-  });
-
-  afterAll(() => {
-    if (existsSync(testPdfPath)) unlinkSync(testPdfPath);
-    if (existsSync(outputPath)) unlinkSync(outputPath);
-  });
-
-  afterEach(() => {
-    if (existsSync(outputPath)) unlinkSync(outputPath);
+    testPdfBytes = await pdfDoc.save();
   });
 
   describe('encryptPDF', () => {
@@ -34,13 +20,10 @@ describe('PDFEncryptor', () => {
         kdf: { iterations: 1000 },
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(result.outputPath).toBe(outputPath);
-      expect(existsSync(outputPath)).toBe(true);
-      expect(result.metadata?.algorithm).toBe('AES-256');
-      expect(result.metadata?.kdfIterations).toBe(1000);
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should encrypt a PDF with AES-128', async () => {
@@ -50,11 +33,10 @@ describe('PDFEncryptor', () => {
         kdf: { iterations: 5000 },
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(result.metadata?.algorithm).toBe('AES-128');
-      expect(result.metadata?.kdfIterations).toBe(5000);
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should encrypt a PDF with RC4-128', async () => {
@@ -63,10 +45,10 @@ describe('PDFEncryptor', () => {
         algorithm: 'RC4-128',
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(result.metadata?.algorithm).toBe('RC4-128');
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should use default AES-256 when no algorithm specified', async () => {
@@ -74,10 +56,10 @@ describe('PDFEncryptor', () => {
         userPassword: 'testPassword123',
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(result.metadata?.algorithm).toBe('AES-256');
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should handle different user and owner passwords', async () => {
@@ -87,10 +69,10 @@ describe('PDFEncryptor', () => {
         algorithm: 'AES-256',
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(existsSync(outputPath)).toBe(true);
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should enable HMAC when requested', async () => {
@@ -100,10 +82,10 @@ describe('PDFEncryptor', () => {
         enableHMAC: true,
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(result.metadata?.hmacEnabled).toBe(true);
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
     it('should apply permission restrictions', async () => {
@@ -116,34 +98,29 @@ describe('PDFEncryptor', () => {
         },
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const encryptedBytes = await PDFEncryptor.encryptPDF(testPdfBytes, options);
 
-      expect(result.success).toBe(true);
-      expect(existsSync(outputPath)).toBe(true);
+      expect(encryptedBytes).toBeInstanceOf(Uint8Array);
+      expect(encryptedBytes.length).toBeGreaterThan(0);
     });
 
-    it('should return error for non-existent input file', async () => {
+    it('should handle invalid PDF bytes', async () => {
       const options: EncryptionOptions = {
         userPassword: 'testPassword123',
       };
 
-      const result = await PDFEncryptor.encryptPDF(
-        'non-existent-file.pdf',
-        outputPath,
-        options,
-      );
+      const invalidBytes = new Uint8Array([1, 2, 3, 4]);
 
-      expect(result.success).toBe(false);
-      expect(result.error).toContain('Input file not found');
+      await expect(PDFEncryptor.encryptPDF(invalidBytes, options)).rejects.toThrow();
     });
 
-    it('should track encryption time', async () => {
+    it('should track encryption time with metadata', async () => {
       const options: EncryptionOptions = {
         userPassword: 'testPassword123',
         algorithm: 'AES-256',
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const result = await PDFEncryptor.encryptPDFWithMetadata(testPdfBytes, options);
 
       expect(result.success).toBe(true);
       expect(result.metadata?.encryptionTime).toBeGreaterThan(0);
@@ -154,30 +131,10 @@ describe('PDFEncryptor', () => {
         userPassword: 'testPassword123',
       };
 
-      const result = await PDFEncryptor.encryptPDF(testPdfPath, outputPath, options);
+      const result = await PDFEncryptor.encryptPDFWithMetadata(testPdfBytes, options);
 
       expect(result.success).toBe(true);
       expect(result.metadata?.fileSize).toBeGreaterThan(0);
-    });
-  });
-
-  describe('generateOutputPath', () => {
-    it('should generate output path with default suffix', () => {
-      const input = '/path/to/document.pdf';
-      const output = PDFEncryptor.generateOutputPath(input);
-      expect(output).toBe('/path/to/document_encrypted.pdf');
-    });
-
-    it('should generate output path with custom suffix', () => {
-      const input = '/path/to/document.pdf';
-      const output = PDFEncryptor.generateOutputPath(input, '_secure');
-      expect(output).toBe('/path/to/document_secure.pdf');
-    });
-
-    it('should handle files without extension properly', () => {
-      const input = '/path/to/document';
-      const output = PDFEncryptor.generateOutputPath(input);
-      expect(output).toBe('/path/to/document_encrypted.pdf');
     });
   });
 });

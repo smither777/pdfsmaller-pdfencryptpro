@@ -96,40 +96,40 @@ const encryptedBytes = await encryptPDF(
 
 ```javascript
 import { PDFEncryptor } from '@pdfsmaller/pdf-encrypt-pro';
+import fs from 'fs';
+
+// Read PDF file
+const pdfBytes = new Uint8Array(fs.readFileSync('document.pdf'));
 
 // Basic AES-256 encryption
-const result = await PDFEncryptor.encryptPDF(
-  'document.pdf',
-  'encrypted.pdf',
-  {
-    userPassword: 'secretPassword123',
-    algorithm: 'AES-256'
-  }
-);
+const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
+  userPassword: 'secretPassword123',
+  algorithm: 'AES-256'
+});
 
-// Enterprise security with HMAC
-const result = await PDFEncryptor.encryptPDF(
-  'sensitive.pdf',
-  'secured.pdf',
-  {
-    userPassword: 'userPass123',
-    ownerPassword: 'ownerPass456',
-    algorithm: 'AES-256',
-    kdf: {
-      iterations: 10000,
-      saltLength: 16
-    },
-    enableHMAC: true,
-    permissions: {
-      printing: false,
-      copying: false,
-      modifying: false
-    }
+// Save encrypted PDF
+fs.writeFileSync('encrypted.pdf', encryptedBytes);
+
+// Enterprise security with HMAC and metadata
+const result = await PDFEncryptor.encryptPDFWithMetadata(pdfBytes, {
+  userPassword: 'userPass123',
+  ownerPassword: 'ownerPass456',
+  algorithm: 'AES-256',
+  kdf: {
+    iterations: 10000,
+    saltLength: 16
+  },
+  enableHMAC: true,
+  permissions: {
+    printing: false,
+    copying: false,
+    modifying: false
   }
-);
+});
 
 if (result.success) {
-  console.log(`✅ Encrypted: ${result.outputPath}`);
+  fs.writeFileSync('secured.pdf', result.encryptedBytes);
+  console.log(`✅ Encrypted with ${result.metadata.algorithm}`);
   console.log(`⏱️ Time: ${result.metadata.encryptionTime}ms`);
 }
 ```
@@ -232,7 +232,7 @@ Options:
 
 ## 📚 API Reference
 
-### `PDFEncryptor.encryptPDF(input, output, options)`
+### `PDFEncryptor.encryptPDF(pdfBytes, options)`
 
 ```typescript
 interface EncryptionOptions {
@@ -350,39 +350,37 @@ async function protectPDF(file, password) {
 ### Node.js/Express
 ```javascript
 app.post('/encrypt', upload.single('pdf'), async (req, res) => {
-  const result = await PDFEncryptor.encryptPDF(
-    req.file.path,
-    'output.pdf',
-    {
-      userPassword: req.body.password,
-      algorithm: 'AES-256',
-      enableHMAC: true
-    }
-  );
+  const pdfBytes = new Uint8Array(req.file.buffer);
   
-  res.download(result.outputPath);
+  const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
+    userPassword: req.body.password,
+    algorithm: 'AES-256',
+    enableHMAC: true
+  });
+  
+  res.setHeader('Content-Type', 'application/pdf');
+  res.send(Buffer.from(encryptedBytes));
 });
 ```
 
 ### AWS Lambda
 ```javascript
 exports.handler = async (event) => {
-  const pdfBuffer = Buffer.from(event.body, 'base64');
+  const pdfBytes = new Uint8Array(Buffer.from(event.body, 'base64'));
   
-  const result = await PDFEncryptor.encryptPDF(
-    pdfBuffer,
-    '/tmp/encrypted.pdf',
-    {
-      userPassword: event.password,
-      algorithm: 'AES-256',
-      kdf: { iterations: 10000 },
-      enableHMAC: true
-    }
-  );
+  const encryptedBytes = await PDFEncryptor.encryptPDF(pdfBytes, {
+    userPassword: event.password,
+    algorithm: 'AES-256',
+    kdf: { iterations: 10000 },
+    enableHMAC: true
+  });
   
   return {
     statusCode: 200,
-    body: fs.readFileSync(result.outputPath).toString('base64')
+    body: Buffer.from(encryptedBytes).toString('base64'),
+    headers: {
+      'Content-Type': 'application/pdf'
+    }
   };
 };
 ```
