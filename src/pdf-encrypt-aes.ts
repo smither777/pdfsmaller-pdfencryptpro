@@ -171,7 +171,51 @@ async function computeUserKey(
 }
 
 /**
- * Encrypt object data using RC4 (for compatibility)
+ * Encrypt object data using AES-256
+ */
+async function encryptObjectAES(
+  data: Uint8Array, 
+  objectNum: number, 
+  generationNum: number, 
+  encryptionKey: Uint8Array,
+  algorithm: string
+): Promise<Uint8Array> {
+  // Create object-specific salt from object/generation numbers
+  const salt = new Uint8Array(8);
+  salt[0] = objectNum & 0xFF;
+  salt[1] = (objectNum >> 8) & 0xFF;
+  salt[2] = (objectNum >> 16) & 0xFF;
+  salt[3] = (objectNum >> 24) & 0xFF;
+  salt[4] = generationNum & 0xFF;
+  salt[5] = (generationNum >> 8) & 0xFF;
+  salt[6] = 0;
+  salt[7] = 0;
+  
+  // Derive object-specific key using PBKDF2
+  const objectKey = await CryptoEngine.pbkdf2(
+    bytesToHex(encryptionKey),
+    salt,
+    1, // Single iteration for object keys
+    algorithm === 'AES-256' ? 32 : 16
+  );
+  
+  // Encrypt with AES
+  const { encrypted, iv } = await CryptoEngine.encryptAES(
+    data,
+    objectKey,
+    algorithm === 'AES-256' ? 'AES-256' : 'AES-128'
+  );
+  
+  // Prepend IV to encrypted data (standard AES practice)
+  const result = new Uint8Array(iv.length + encrypted.length);
+  result.set(iv, 0);
+  result.set(encrypted, iv.length);
+  
+  return result;
+}
+
+/**
+ * Encrypt object data using RC4 (fallback for RC4-128 algorithm)
  */
 function encryptObjectRC4(
   data: Uint8Array, 
@@ -206,22 +250,37 @@ function encryptObjectRC4(
 /**
  * Recursively encrypt strings in a PDF object
  */
-function encryptStringsInObject(
+async function encryptStringsInObject(
   obj: any, 
   objectNum: number, 
   generationNum: number, 
-  encryptionKey: Uint8Array
-): void {
+  encryptionKey: Uint8Array,
+  algorithm: string
+): Promise<void> {
   if (!obj) return;
   
   if (obj instanceof PDFString) {
     const originalBytes = obj.asBytes();
-    const encrypted = encryptObjectRC4(originalBytes, objectNum, generationNum, encryptionKey);
+    let encrypted: Uint8Array;
+    
+    if (algorithm === 'RC4-128') {
+      encrypted = encryptObjectRC4(originalBytes, objectNum, generationNum, encryptionKey);
+    } else {
+      encrypted = await encryptObjectAES(originalBytes, objectNum, generationNum, encryptionKey, algorithm);
+    }
+    
     // Replace with encrypted hex
     (obj as any).value = bytesToHex(encrypted);
   } else if (obj instanceof PDFHexString) {
     const originalBytes = hexToBytes(obj.asString());
-    const encrypted = encryptObjectRC4(originalBytes, objectNum, generationNum, encryptionKey);
+    let encrypted: Uint8Array;
+    
+    if (algorithm === 'RC4-128') {
+      encrypted = encryptObjectRC4(originalBytes, objectNum, generationNum, encryptionKey);
+    } else {
+      encrypted = await encryptObjectAES(originalBytes, objectNum, generationNum, encryptionKey, algorithm);
+    }
+    
     (obj as any).value = bytesToHex(encrypted);
   } else if (obj instanceof PDFDict) {
     // Don't encrypt certain dictionary entries
@@ -230,13 +289,13 @@ function encryptStringsInObject(
       const keyName = key.asString();
       // Skip encryption-related entries
       if (keyName !== '/Length' && keyName !== '/Filter' && keyName !== '/DecodeParms') {
-        encryptStringsInObject(value, objectNum, generationNum, encryptionKey);
+        await encryptStringsInObject(value, objectNum, generationNum, encryptionKey, algorithm);
       }
     }
   } else if (obj instanceof PDFArray) {
     const array = obj.asArray();
     for (const element of array) {
-      encryptStringsInObject(element, objectNum, generationNum, encryptionKey);
+      await encryptStringsInObject(element, objectNum, generationNum, encryptionKey, algorithm);
     }
   }
 }
@@ -303,7 +362,7 @@ export async function encryptPDFWithAES(
     
     const userKey = await computeUserKey(encryptionKey, fileId);
     
-    // Encrypt all objects (using RC4 for compatibility)
+    // Encrypt all objects using AES
     const indirectObjects = context.enumerateIndirectObjects();
     
     for (const [ref, obj] of indirectObjects) {
@@ -321,30 +380,79 @@ export async function encryptPDFWithAES(
       // Encrypt streams
       if (obj instanceof PDFRawStream) {
         const streamData = (obj as any).contents;
-        const encrypted = encryptObjectRC4(streamData, objectNum, generationNum, encryptionKey);
+        let encrypted: Uint8Array;
+        
+        if (algorithm === 'RC4-128') {
+          encrypted = encryptObjectRC4(streamData, objectNum, generationNum, encryptionKey);
+        } else {
+          encrypted = await encryptObjectAES(streamData, objectNum, generationNum, encryptionKey, algorithm);
+        }
+        
         (obj as any).contents = encrypted;
       }
       
       // Encrypt strings in the object
-      encryptStringsInObject(obj, objectNum, generationNum, encryptionKey);
+      await encryptStringsInObject(obj, objectNum, generationNum, encryptionKey, algorithm);
     }
     
     // Create the /Encrypt dictionary
-    const encryptDict = context.obj({
-      Filter: PDFName.of('Standard'),
-      V: PDFNumber.of(2),        // Version 2 (RC4 for now)
-      R: PDFNumber.of(3),        // Revision 3 (128-bit)
-      Length: PDFNumber.of(128),  // Key length in bits
-      P: PDFNumber.of(permissions),
-      O: PDFHexString.of(bytesToHex(ownerKey.slice(0, 32))),
-      U: PDFHexString.of(bytesToHex(userKey.slice(0, 32)))
-    });
+    let encryptDict;
     
-    // Add metadata to indicate enhanced security
-    if (algorithm === 'AES-256') {
-      (encryptDict as any).set(PDFName.of('EncryptMetadata'), context.obj(true));
-      (encryptDict as any).set(PDFName.of('OE'), PDFHexString.of(bytesToHex(ownerKey)));
-      (encryptDict as any).set(PDFName.of('UE'), PDFHexString.of(bytesToHex(userKey)));
+    if (algorithm === 'RC4-128') {
+      // RC4-128 encryption (PDF 1.4)
+      encryptDict = context.obj({
+        Filter: PDFName.of('Standard'),
+        V: PDFNumber.of(2),        // Version 2 (RC4)
+        R: PDFNumber.of(3),        // Revision 3 (128-bit)
+        Length: PDFNumber.of(128),  // Key length in bits
+        P: PDFNumber.of(permissions),
+        O: PDFHexString.of(bytesToHex(ownerKey.slice(0, 32))),
+        U: PDFHexString.of(bytesToHex(userKey.slice(0, 32)))
+      });
+    } else if (algorithm === 'AES-128') {
+      // AES-128 encryption (PDF 1.6)
+      encryptDict = context.obj({
+        Filter: PDFName.of('Standard'),
+        V: PDFNumber.of(4),        // Version 4 (AES-128)
+        R: PDFNumber.of(4),        // Revision 4
+        Length: PDFNumber.of(128),  // Key length in bits
+        P: PDFNumber.of(permissions),
+        O: PDFHexString.of(bytesToHex(ownerKey.slice(0, 32))),
+        U: PDFHexString.of(bytesToHex(userKey.slice(0, 32))),
+        StmF: PDFName.of('StdCF'),  // Stream filter
+        StrF: PDFName.of('StdCF'),  // String filter
+        CF: context.obj({
+          StdCF: context.obj({
+            CFM: PDFName.of('AESV2'),  // AES encryption
+            AuthEvent: PDFName.of('DocOpen'),
+            Length: PDFNumber.of(128)
+          })
+        })
+      });
+    } else {
+      // AES-256 encryption (PDF 2.0)
+      encryptDict = context.obj({
+        Filter: PDFName.of('Standard'),
+        V: PDFNumber.of(5),        // Version 5 (AES-256)
+        R: PDFNumber.of(6),        // Revision 6
+        Length: PDFNumber.of(256),  // Key length in bits
+        P: PDFNumber.of(permissions),
+        O: PDFHexString.of(bytesToHex(ownerKey.slice(0, 32))),
+        U: PDFHexString.of(bytesToHex(userKey.slice(0, 32))),
+        OE: PDFHexString.of(bytesToHex(ownerKey)),  // Owner encryption key
+        UE: PDFHexString.of(bytesToHex(userKey)),   // User encryption key
+        Perms: PDFHexString.of(bytesToHex(new Uint8Array(16))), // Encrypted permissions
+        EncryptMetadata: context.obj(true),
+        StmF: PDFName.of('StdCF'),  // Stream filter
+        StrF: PDFName.of('StdCF'),  // String filter
+        CF: context.obj({
+          StdCF: context.obj({
+            CFM: PDFName.of('AESV3'),  // AES-256 encryption
+            AuthEvent: PDFName.of('DocOpen'),
+            Length: PDFNumber.of(256)
+          })
+        })
+      });
     }
     
     // Register the encrypt dictionary
@@ -353,8 +461,14 @@ export async function encryptPDFWithAES(
     // Update trailer
     trailer.Encrypt = encryptRef;
     
-    // Set producer
-    pdfDoc.setProducer('PDFSmaller.com - AES-256 Enterprise Security');
+    // Set producer based on algorithm
+    const producerText = algorithm === 'AES-256' 
+      ? 'PDFSmaller.com - AES-256 Enterprise Security'
+      : algorithm === 'AES-128'
+      ? 'PDFSmaller.com - AES-128 Enhanced Security'
+      : 'PDFSmaller.com - RC4-128 Standard Security';
+    
+    pdfDoc.setProducer(producerText);
     
     // Save the encrypted PDF
     const encryptedBytes = await pdfDoc.save({

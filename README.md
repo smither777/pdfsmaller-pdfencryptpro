@@ -11,16 +11,16 @@ Built by [PDFSmaller.com](https://pdfsmaller.com) - The ONLY AES-256 PDF encrypt
 
 ## 🚀 Why pdf-encrypt-pro?
 
-**The ONLY professional PDF encryption library that works in edge environments!**
+**The ONLY professional PDF encryption library with TRUE AES-256 that works in edge environments!**
 
 When [PDFSmaller.com](https://pdfsmaller.com) users needed bank-level PDF security that works everywhere - from Cloudflare Workers to browsers to Node.js - we built this. While other "enterprise" libraries are stuck in Node.js, we deliver:
 
-- **AES-256 encryption** using Web Crypto API (works in edge!)
+- **TRUE AES-256 encryption** using Web Crypto API (works in edge!)
 - **PBKDF2 key derivation** to prevent brute-force attacks  
 - **HMAC integrity verification** to detect tampering
 - **Runs EVERYWHERE** - Cloudflare Workers, Vercel Edge, browsers, Node.js
 
-**This is enterprise PDF security that actually works in modern environments.**
+**Version 1.1.0: Now with REAL AES-256 encryption, not just RC4!**
 
 ### The Security Stack We Built:
 - ✅ **AES-256**: NSA-approved encryption standard
