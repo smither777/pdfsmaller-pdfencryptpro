@@ -28,7 +28,7 @@ export class PDFEncryptor {
       const encryptedBytes = await this.encryptPDF(pdfBytes, options);
 
       const metadata: EncryptionMetadata = {
-        algorithm: options.algorithm || 'AES-256',
+        algorithm: options.algorithm || 'AES-128',
         kdfIterations: options.kdf?.iterations || 10000,
         hmacEnabled: options.enableHMAC || false,
         fileSize: encryptedBytes.length,

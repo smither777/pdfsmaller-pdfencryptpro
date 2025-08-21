@@ -49,7 +49,7 @@ async function encryptPDF(pdfBytes, userPassword, ownerPassword, options) {
     return PDFEncryptor.encryptPDF(pdfBytes, {
         userPassword,
         ownerPassword,
-        algorithm: options?.algorithm || 'AES-256',
+        algorithm: options?.algorithm || 'AES-128',
         enableHMAC: options?.enableHMAC,
         kdf: options?.iterations ? { iterations: options.iterations } : undefined,
     });

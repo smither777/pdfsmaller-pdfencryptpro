@@ -1,4 +1,4 @@
-export type EncryptionAlgorithm = 'AES-256' | 'AES-128' | 'RC4-128';
+export type EncryptionAlgorithm = 'AES-128' | 'RC4-128';
 
 export interface EncryptionOptions {
   userPassword: string;

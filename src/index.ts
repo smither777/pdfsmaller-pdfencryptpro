@@ -8,7 +8,7 @@ export async function encryptPDF(
   userPassword: string,
   ownerPassword?: string,
   options?: {
-    algorithm?: 'AES-256' | 'AES-128' | 'RC4-128';
+    algorithm?: 'AES-128' | 'RC4-128';
     enableHMAC?: boolean;
     iterations?: number;
   }
@@ -18,7 +18,7 @@ export async function encryptPDF(
   return PDFEncryptor.encryptPDF(pdfBytes, {
     userPassword,
     ownerPassword,
-    algorithm: options?.algorithm || 'AES-256',
+    algorithm: options?.algorithm || 'AES-128',
     enableHMAC: options?.enableHMAC,
     kdf: options?.iterations ? { iterations: options.iterations } : undefined,
   });

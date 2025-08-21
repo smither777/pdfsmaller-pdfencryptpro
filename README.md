@@ -150,11 +150,11 @@ This library powers enterprise features at [PDFSmaller.com](https://pdfsmaller.c
 
 | Feature | pdf-encrypt-lite | pdf-encrypt-pro |
 |---------|-----------------|-----------------|
-| **Encryption** | RC4-128 | AES-256, AES-128, RC4-128 |
+| **Encryption** | RC4-128 | AES-128, RC4-128 |
 | **Key Derivation** | MD5 | PBKDF2 (10,000+ iterations) |
 | **Integrity Check** | ❌ | HMAC-SHA256 |
 | **Permissions** | Basic | 8 Granular Controls |
-| **Package Size** | ~7KB | ~45KB |
+| **Package Size** | ~7KB | ~21KB |
 | **Use Case** | Basic Protection | Enterprise Security |
 | **Compliance** | Basic | FIPS, ISO, HIPAA Ready |
 
