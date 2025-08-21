@@ -1,11 +1,10 @@
 import { EncryptionOptions, EncryptionResult } from './types';
 export declare class PDFEncryptor {
-    private static readonly PERMISSIONS_FLAGS;
+    /**
+     * Encrypt a PDF with AES-256, AES-128, or RC4-128
+     * Using the same approach as pdf-encrypt-lite but enhanced with AES
+     */
     static encryptPDF(pdfBytes: Uint8Array, options: EncryptionOptions): Promise<Uint8Array>;
     static encryptPDFWithMetadata(pdfBytes: Uint8Array, options: EncryptionOptions): Promise<EncryptionResult>;
-    private static createEncryptionDictionary;
-    private static calculatePermissions;
-    private static padKey;
-    private static uint8ArrayToHex;
 }
 //# sourceMappingURL=encryptor.d.ts.map
